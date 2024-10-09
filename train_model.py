@@ -5,7 +5,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-import pickle  # Import pickle for saving the model
+from sklearn.metrics import mean_squared_error, r2_score
+import pickle  # For saving the model
 
 # Load the dataset
 data = pd.read_csv('BigMart.csv')
@@ -32,14 +33,14 @@ print(f"Target shape: {target.shape}")
 if features.empty or target.empty:
     print("No data available for training and testing. Check your preprocessing steps.")
 else:
-    # Split the dataset
+    # Split the dataset into training and testing sets
     x_train, x_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
 
-    # Define a preprocessing pipeline
+    # Define numeric and categorical features
     numeric_features = x_train.select_dtypes(include=['int64', 'float64']).columns.tolist()
     categorical_features = x_train.select_dtypes(include=['object']).columns.tolist()
 
-    # Create transformers
+    # Create transformers for preprocessing
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='mean'))
     ])
@@ -49,7 +50,7 @@ else:
         ('onehot', OneHotEncoder(handle_unknown='ignore'))
     ])
 
-    # Combine transformers
+    # Combine transformers into a preprocessor
     preprocessor = ColumnTransformer(
         transformers=[
             ('num', numeric_transformer, numeric_features),
@@ -57,15 +58,23 @@ else:
         ])
 
     # Create a final pipeline with a DecisionTreeRegressor
-    model = Pipeline(steps=[('preprocessor', preprocessor),
-                             ('regressor', DecisionTreeRegressor(random_state=42))])
+    model = Pipeline(steps=[
+        ('preprocessor', preprocessor),
+        ('regressor', DecisionTreeRegressor(random_state=42))
+    ])
 
     # Fit the model
     model.fit(x_train, y_train)
-
-    # Optionally: Evaluate the model (add evaluation code here if needed)
     print("Training completed.")
+
+    # Evaluate the model
+    y_pred = model.predict(x_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    print(f"Mean Squared Error: {mse:.2f}")
+    print(f"R^2 Score: {r2:.2f}")
 
     # Save the trained model to a pickle file
     with open('model.pkl', 'wb') as file:
         pickle.dump(model, file)  # Save the pipeline model
+    print("Model saved to 'model.pkl'.")
